@@ -1,0 +1,68 @@
+\documentclass{article}
+
+\usepackage{setspace}
+\setstretch{1.08}
+\frenchspacing
+
+\usepackage{amsmath}
+\DeclareMathOperator{\e}{e}
+
+\title{\bfseries Ragged, robust, heteroskedastic matrix factorization}
+\author{Hogg \and others}
+\date{April 2026}
+
+\begin{document}
+
+\maketitle
+
+First there was principal components analysis (PCA) \cite{pca},
+then there was heteroskedastic matrix factorization (HMF) \cite{hmt},
+and then there was Robust HMF \cite{rhmf}.
+In all of these, the idea is that the user has \emph{rectangular data}:
+There are $N$ data vectors (lists really) $\vec{y}_n$, each of which is an ordered list of $d$ features, making up a $N\times d$ data matrix $Y$.
+We will refer to the $nj$ element of $Y$ as $y_{nj}$ with $1\leq n\leq N$ and $1\leq j\leq d$.
+
+In PCA, all of these $N\times d$ data points $y_{nj}$ is treated as identically valuable;
+in HMF, each data point comes with its own weight $w_{nj}$ (and, indeed, some of those weights can be zero);
+in robust HMF, each data point gets a weight adjustment depending on how well the low-rank structure that I am about to describe fits that data point.
+Importantly, HMF and robust HMF permit there to be missing data, because data points can be given zero weights.
+
+In all three cases, the fundamental model is a low-rank linear representation, or a matrix factorization.
+That is, each model can be written as
+\begin{align}
+    y_{nj} &= \sum_{k=1}^K a_{nk}\,g_{kj} + \text{residual}_{nj} ~,
+\end{align}
+where the $a_{nk}$ are coefficients ($K$ for each data vector $n$ and the $g_{kj}$ are elements of eigenvectors or eigenlists, which can be thought of as comprising $K$ $d$-vectors $\vec{g}_k$.
+Some might write this equation as
+\begin{align}
+    Y &= A\,G + \text{residuals} ~,
+\end{align}
+where $A$ and $G$ are $N\times K$ and $K\times d$ matrices of coefficients and eigenvectors,
+and now the residuals make up a $N\times d$ array.
+The only differences, in this context, between PCA, HMF, and robust HMF, is what loss function of the residuals is used to set the coefficients $A$ and eigenvectors $G$.
+
+In many astronomical contexts, we don't get rectangular data.
+For example, in \textsl{LSST} \cite{lsst}, each source $n$ on the sky will have a set of observations taken at different times $t_{nj}$.
+No two stars will have the same set of times; indeed different sources will general be observed a different number of times.
+In NASA \textsl{SPHEREx} \cite{spherex}, no two pixels on the sky will be observed at the same list of wavelengths; indeed different pixels get different numbers of observations, and each observation $j$ of pixel $n$ is at a different value of wavelength $\lambda_{nj}$ (in general).
+For specificity here, we will proceed with the \textsl{SPHEREx} context.
+
+Now the setup is that we have $N$ pixels $n$ on the sky, each of which has been observed a different number $d_n$ of times.
+Each pixel $n$ has associated with it a $d_n$-list $\vec{z}_n$ of ordered triples:
+\begin{align}
+    \vec{z}_n &= \left\{ (\lambda_{nj}, y_{nj}, w_{nj}) \right\}_{j=1}^{d_n} ~,
+\end{align}
+where there are $d_n$ measurements associated with pixel $n$,
+each of which is made up of a wavelength $\lambda_{nj}$, an intensity measurement $y_{nj}$, and a weight (inverse uncertainty variance) $w_{nj}$.
+We imagine that each observation $y_{nj}$ is a noisy measurement of a continuous function of wavelength, such that the equivalent of a low-rank model would be
+\begin{align}
+    y_{nj} &= \sum_{k=1}^K a_{nk} \sum_{m=-M}^M b_{k,m}\,\exp(i m \frac{\lambda_{nj}}{L}) + \text{residual}_{nj} ~,
+\end{align}
+where we have (arbitrarily) chosen to work in a Fourier-series basis,
+the $b_{k,m}$ are complex,
+and we will enforce $b_{k,m}=b_{k,-m}^\ast$ to keep everything real in the end.
+Along with the rank $K$, we have chosen a real scale $L$ and an integer $M$ to set the domain and the bandwidth of the model.
+
+Optimization proceeds identically to that in robust HMF; we will have an a-step, a b-step, and a w-step, each one analogous to its corresponding step in the robust-HMF work.
+
+\end{document}
