@@ -1,14 +1,25 @@
 \documentclass{article}
 
+% typesetting and text macros
+\usepackage[letterpaper, textheight=9.0in, textwidth=5.2in]{geometry}
 \usepackage{setspace}
 \setstretch{1.08}
-\frenchspacing
+\usepackage{fancyhdr}
+\setlength{\topmargin}{0.0in}
+\setlength{\headheight}{3.0ex}\addtolength{\topmargin}{-0.5\headheight} % make room for headers
+\setlength{\headsep}{3.0ex}\addtolength{\topmargin}{-0.5\headsep}
+\pagestyle{fancy}
+%\renewcommand{\headrulewidth}{0.0pt}
+\fancyhf{}
+\fancyhead[R]{\sffamily\thepage}
+\sloppy\sloppypar\raggedbottom\frenchspacing
 
 \usepackage{amsmath}
 \DeclareMathOperator{\ee}{e}
 \DeclareMathOperator{\ii}{i}
 
-\title{\bfseries Ragged, robust, heteroskedastic matrix factorization}
+\fancyhead[L]{\sffamily team / Ragged, robust, and heteroskedastic data factorizations}
+\title{\bfseries Ragged, robust, and heteroskedastic data factorizations}
 \author{Hogg \and others}
 \date{April 2026}
 
@@ -57,7 +68,7 @@ where there are $d_n$ measurements associated with pixel $n$,
 each of which is made up of a wavelength $\lambda_{nj}$, an intensity measurement $y_{nj}$, and a weight (inverse uncertainty variance) $w_{nj}$.
 We imagine that each observation $y_{nj}$ is a noisy measurement of a continuous function of wavelength, such that the equivalent of a low-rank model would be
 \begin{align}
-    y_{nj} &= \sum_{k=1}^K a_{nk} \sum_{m=-M}^M b_{k,m}\,\exp(\ii m\,\frac{2\pi\,\lambda_{nj}}{L}) + \text{residual}_{nj} ~,
+    y_{nj} &= \sum_{k=1}^K a_{nk} \sum_{m=-M}^M b_{k,m}\,\exp(\ii m\,\frac{2\pi\,\lambda_{nj}}{L}) + \text{residual}_{nj} ~,\label{eq:model}
 \end{align}
 where we have (somewhat arbitrarily) chosen to work in a Fourier-series basis,
 the $b_{k,m}$ are complex,
@@ -68,7 +79,11 @@ HOGG: What does this do for you?
 It delivers $K$ continuous functions of wavelength---eigenfunctions, if you will---and the best-fit $K$ coefficients for each pixel.
 The eigenfunctions $g_k(\lambda)$ are
 \begin{align}
-    g_k(\lambda) &= \sum_{m=-M}^M b_{k,m}\,\exp(\ii m\,\frac{2\pi\,\lambda}{L})
+    g_k(\lambda) &= \sum_{m=-M}^M b_{k,m}\,\exp(\ii m\,\frac{2\pi\,\lambda}{L}) ~.
+\end{align}
+With this definition, the model \eqref{eq:model} can be written
+\begin{align}
+    y_{nj} &= \sum_{k=1}^K a_{nk}\,g_k(\lambda_{nj}) + \text{residual}_{nj} ~.
 \end{align}
 This model permits you to predict what you \emph{would have observed} if you had observed pixel $n$ at some wavelength $\lambda_\ast$ at which it has never been previously observed.
 It permits you to interpolate and extrapolate the spectrum of a pixel with sparse data.
