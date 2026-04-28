@@ -17,9 +17,12 @@
 \usepackage{amsmath}
 \DeclareMathOperator{\ee}{e}
 \DeclareMathOperator{\ii}{i}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator{\loss}{loss}
+\DeclareMathOperator{\rank}{rank}
 
 \fancyhead[L]{\sffamily team / Ragged, robust, and heteroskedastic data factorizations}
-\title{\bfseries Ragged, robust, and heteroskedastic data factorizations}
+\title{\bfseries A learned set of continuous eigenfunctions, as a model for heterogeneous and ragged data, by way of robust heteroskedastic factorizations in function space}
 \author{Hogg \and others}
 \date{April 2026}
 
@@ -27,8 +30,18 @@
 
 \maketitle
 
+\paragraph{Abstract:}
+The original dimensionality reduction method is PCA, which represents a rectangular data matrix with a rank-$K$ approximation, optimizing a mean-squared loss.
+There are extensions and improvements, but most of them require rectangular data (though some permit missing values).
+In many astrophysical contexts, data are truly ragged; for example,
+think of \textsl{LSST} observations of a star or NASA \textsl{SPHEREx} observations of a pixel on the sky:
+Each star or pixel gets a different number of observations, at different locations in time and in wavelength.
+Here we provide a dimensionality reduction that learns a low-dimensional basis of continuous functions, constrained by heterogeneous and ragged data, and a projection of the ragged data onto the basis.
+The method interpolates and extrapolates spectra, answers counterfactual questions about missing data, and identifies outlier and anomalous data points.
+
+\bigskip\noindent
 First there was principal components analysis (PCA) \cite{pca},
-then there was heteroskedastic matrix factorization (HMF) \cite{hmt},
+then there was heteroskedastic matrix factorization (HMF) \cite{hmf},
 and then there was Robust HMF \cite{rhmf}.
 In all of these, the idea is that the user has \emph{rectangular data}:
 There are $N$ data vectors (lists really) $\vec{y}_n$, each of which is an ordered list of $d$ features, making up a $N\times d$ data matrix $Y$.
@@ -52,6 +65,11 @@ Some might write this equation as
 where $A$ and $G$ are $N\times K$ and $K\times d$ matrices of coefficients and eigenvectors,
 and now the residuals make up a $N\times d$ array.
 The only differences, in this context, between PCA, HMF, and robust HMF, is what loss function of the residuals is used to set the coefficients $A$ and eigenvectors $G$.
+That is, each of these methods can be written in the form
+\begin{align}
+    \hat{A}, \hat{G} &= \argmin_{A, G} \loss(Y - A\,G) \quad\text{s. t.}~\rank(A\,G) = K ~,
+\end{align}
+for some loss (different for each method).
 
 In many astronomical contexts, we don't get rectangular data.
 For example, in \textsl{LSST} \cite{lsst}, each source $n$ on the sky will have a set of observations taken at different times $t_{nj}$.
@@ -60,15 +78,16 @@ In NASA \textsl{SPHEREx} \cite{spherex}, no two pixels on the sky will be observ
 For specificity here, we will proceed with the \textsl{SPHEREx} context.
 
 Now the setup is that we have $N$ pixels $n$ on the sky, each of which has been observed a different number $d_n$ of times.
-Each pixel $n$ has associated with it a $d_n$-list $\vec{z}_n$ of ordered triples:
+Each pixel $n$ has associated with it a set (not even a list) $\vec{z}_n$, of size $d_n$, of ordered triples:
 \begin{align}
-    \vec{z}_n &= \left\{ (\lambda_{nj}, y_{nj}, w_{nj}) \right\}_{j=1}^{d_n} ~,
+    \vec{z}_n &= \left\{ (x_{nj}, y_{nj}, w_{nj}) \right\}_{j=1}^{d_n} ~,
 \end{align}
 where there are $d_n$ measurements associated with pixel $n$,
-each of which is made up of a wavelength $\lambda_{nj}$, an intensity measurement $y_{nj}$, and a weight (inverse uncertainty variance) $w_{nj}$.
-We imagine that each observation $y_{nj}$ is a noisy measurement of a continuous function of wavelength, such that the equivalent of a low-rank model would be
+each of which is made up of a wavelength (or log-wavelength or other positional parameter) $x_{nj}$, an intensity measurement $y_{nj}$, and a weight (inverse uncertainty variance) $w_{nj}$.
+We imagine that each observation $y_{nj}$ is a noisy measurement of a continuous function of the position $x$, such that the equivalent of a low-rank model would be
 \begin{align}
-    y_{nj} &= \sum_{k=1}^K a_{nk} \sum_{m=-M}^M b_{k,m}\,\exp(\ii m\,\frac{2\pi\,\lambda_{nj}}{L}) + \text{residual}_{nj} ~,\label{eq:model}
+    y_{nj} &= \sum_{k=1}^K a_{nk} \sum_{m=-M}^M b_{k,m}\,\ee^{\ii \kappa_m\,x_{nj}} + \text{residual}_{nj} \label{eq:model}\\
+    \kappa_m &= \frac{2\pi\,m}{L} ~,
 \end{align}
 where we have (somewhat arbitrarily) chosen to work in a Fourier-series basis,
 the $b_{k,m}$ are complex,
@@ -77,21 +96,33 @@ Along with the rank $K$, we have chosen a real scale $L$ and an integer $M$ to s
 
 HOGG: What does this do for you?
 It delivers $K$ continuous functions of wavelength---eigenfunctions, if you will---and the best-fit $K$ coefficients for each pixel.
-The eigenfunctions $g_k(\lambda)$ are
+The eigenfunctions $g_k(x)$ are
 \begin{align}
-    g_k(\lambda) &= \sum_{m=-M}^M b_{k,m}\,\exp(\ii m\,\frac{2\pi\,\lambda}{L}) ~.
+    g_k(x) &= \sum_{m=-M}^M b_{k,m}\,\ee^{\ii \kappa_m\,x} ~.
 \end{align}
 With this definition, the model \eqref{eq:model} can be written
 \begin{align}
-    y_{nj} &= \sum_{k=1}^K a_{nk}\,g_k(\lambda_{nj}) + \text{residual}_{nj} ~.
+    y_{nj} &= \sum_{k=1}^K a_{nk}\,g_k(x_{nj}) + \text{residual}_{nj} ~.
 \end{align}
-This model permits you to predict what you \emph{would have observed} if you had observed pixel $n$ at some wavelength $\lambda_\ast$ at which it has never been previously observed.
+This model permits you to predict what you \emph{would have observed} if you had observed pixel $n$ at some wavelength $x_\ast$ at which it has never been previously observed.
 It permits you to interpolate and extrapolate the spectrum of a pixel with sparse data.
 
 Optimization proceeds identically to that in robust HMF; we will have an a-step, a b-step, and a w-step, each one analogous to its corresponding step in the robust-HMF work.
 
 HOGG: Get explicit about these steps.
 
-HOGG: Why Fourier series?
+HOGG: Why Fourier series? Include implementation details like \texttt{finufft} \cite{finufft}.
+
+HOGG: Note that you can add a quadratic regularization and thus include a Gaussian-process kernel!
+
+Comment: In PCA, HMF, and RHMF, we deliver the $A$, $G$ outputs from a singular-value decomposition of the low-rank product $A\,G$.
+In the continuous-function version, I (Hogg) am not sure this is possible.
+Or at least we might have to think about that one.
+The magic of sines and cosines might be such that if we orghogonalize (naively) the $B$ matrix, the resulting functions are orthogonal on the domain $L$.
+
+Comment: Non-negative version might be impossible to create?
+
+\bibliographystyle{plain}
+\bibliography{ragged}
 
 \end{document}
